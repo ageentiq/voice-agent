@@ -1,0 +1,38 @@
+# Core
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+python-multipart==0.0.18
+
+# Anthropic
+anthropic==0.42.0
+
+# Telephony
+twilio==9.4.0
+
+# Speech-to-Text (Deepgram)
+deepgram-sdk==3.8.1
+
+# Text-to-Speech (ElevenLabs)
+elevenlabs==1.16.0
+
+# RAG
+chromadb==0.5.23
+sentence-transformers==3.3.1
+pypdf==5.1.0
+
+# Database
+motor==3.6.0
+pymongo==4.10.1
+
+# Audio processing
+audioop-lts==0.2.1
+
+# HTTP
+httpx==0.28.1
+websockets==14.1
+
+# Utilities
+structlog==24.4.0

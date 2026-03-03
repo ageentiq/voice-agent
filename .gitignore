@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# ChromaDB data
+chroma_data/
+
+# Knowledge base documents (user-provided, not tracked)
+knowledge_base/*.pdf
+knowledge_base/*.txt
+!knowledge_base/.gitkeep
+
+# Test
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Logs
+*.log

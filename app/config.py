@@ -10,8 +10,7 @@ class Settings(BaseSettings):
     twilio_auth_token: str
     twilio_phone_number: str
 
-    # Deepgram
-    deepgram_api_key: str
+    # Hamsa is used for both STT and TTS — single API key
 
     # Hamsa TTS (tryhamsa.com)
     hamsa_api_key: str

@@ -14,7 +14,7 @@ from app.config import settings
 from app.models.call import CallDirection, CallSession, CallStatus, TranscriptEntry
 from app.services import database, rag
 from app.services.agent import VoiceAgent
-from app.services.stt import DeepgramSTT
+from app.services.stt import HamsaSTT
 from app.services.tts import HamsaTTS
 
 logger = structlog.get_logger()
@@ -37,7 +37,7 @@ class ActiveCall:
     def __init__(self, session: CallSession, agent: VoiceAgent):
         self.session = session
         self.agent = agent
-        self.stt = DeepgramSTT()
+        self.stt = HamsaSTT()
         self.tts = HamsaTTS()
         self._ws = None  # Twilio WebSocket
         self._stream_sid: str | None = None
@@ -70,7 +70,7 @@ class ActiveCall:
         logger.info("Call stream started", call_id=self.session.call_id)
 
     def _on_transcript(self, text: str, is_final: bool) -> None:
-        """Handle STT transcript (called from Deepgram callback)."""
+        """Handle STT transcript (called from Hamsa STT callback)."""
         if is_final:
             self._current_utterance += " " + text if self._current_utterance else text
         else:

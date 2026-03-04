@@ -17,7 +17,7 @@ Build a voice-based customer service agent for Osus Real Estate (أُسُس ال
 └──────────────┘     │       ┌───────────────────────┼──────┐        │
                      │       ▼                       ▼      ▼        │
                      │  ┌─────────┐  ┌──────────────────┐ ┌──────┐  │
-                     │  │Deepgram │  │  Anthropic Claude │ │Eleven│  │
+                     │  │Hamsa │  │  Anthropic Claude │ │Eleven│  │
                      │  │  STT    │─▶│  Agent + Tools    │▶│Labs  │  │
                      │  │(stream) │  │                  │ │ TTS  │  │
                      │  └─────────┘  │  - RAG search    │ │(strm)│  │
@@ -38,7 +38,7 @@ Build a voice-based customer service agent for Osus Real Estate (أُسُس ال
 - **Framework**: FastAPI (async, WebSocket support)
 - **LLM**: Anthropic Claude (via anthropic Python SDK) with tool use
 - **Telephony**: Twilio Programmable Voice + Media Streams (WebSocket)
-- **STT**: Deepgram (real-time streaming, Arabic support)
+- **STT**: Hamsa (real-time streaming, Arabic support)
 - **TTS**: Hamsa (high-quality Arabic voices, streaming)
 - **RAG**: ChromaDB (vector DB) + sentence-transformers (multilingual embeddings)
 - **Database**: MongoDB Atlas (customer data, call logs, analysis)
@@ -63,7 +63,7 @@ voice-agent/
 │   ├── services/
 │   │   ├── __init__.py
 │   │   ├── telephony.py        # Twilio: make calls, handle streams
-│   │   ├── stt.py              # Deepgram streaming STT
+│   │   ├── stt.py              # Hamsa streaming STT
 │   │   ├── tts.py              # Hamsa streaming TTS
 │   │   ├── agent.py            # Claude agent with conversation + tools
 │   │   ├── rag.py              # RAG retrieval (ChromaDB + embeddings)
@@ -117,7 +117,7 @@ voice-agent/
 12. Wire RAG as a Claude tool
 
 ### Phase 4: Voice Pipeline (STT + TTS)
-13. Implement Deepgram streaming STT service
+13. Implement Hamsa streaming STT service
     - WebSocket connection for real-time transcription
     - Arabic language (ar) configuration
     - Endpointing / silence detection for turn-taking
@@ -135,7 +135,7 @@ voice-agent/
     - Per-call state: conversation history, collected info, call status
     - Handle call events (answered, ended, failed, no-answer)
 17. Build the real-time audio pipeline:
-    - Twilio WebSocket → Deepgram STT (streaming)
+    - Twilio WebSocket → Hamsa STT (streaming)
     - Customer text → Claude agent → Response text
     - Response text → Hamsa TTS (streaming) → Twilio WebSocket
 
@@ -175,7 +175,7 @@ voice-agent/
    "السلام عليكم، حياك الله [اسم العميل]، معكم مُبايع من شركة أُسُس العقارية..."
 6. **TTS** converts greeting to audio → streams to Twilio → customer hears it
 7. **Customer speaks** → audio streams via Twilio WebSocket
-8. **Deepgram STT** transcribes in real-time
+8. **Hamsa STT** transcribes in real-time
 9. **Silence detected** (end of utterance) → text sent to **Claude agent**
 10. Claude processes with conversation history, may call tools:
     - `search_knowledge_base`: retrieve project info from RAG
@@ -191,7 +191,7 @@ voice-agent/
 - **Streaming everywhere**: STT and TTS use streaming for minimal latency
 - **Async architecture**: FastAPI + asyncio for concurrent calls
 - **Conversation state per call**: Each active call has its own Claude conversation history
-- **Turn-taking via silence detection**: Deepgram's endpointing detects when customer stops speaking
+- **Turn-taking via silence detection**: Hamsa's endpointing detects when customer stops speaking
 - **Barge-in support**: If customer speaks while TTS is playing, stop TTS and process new input
 - **Arabic-first**: All prompts, embeddings, and voice config optimized for Saudi Arabic
 
@@ -199,7 +199,7 @@ voice-agent/
 - `ANTHROPIC_API_KEY` - Claude API
 - `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` - Twilio
 - `TWILIO_PHONE_NUMBER` - Outbound caller ID (Saudi or international)
-- `DEEPGRAM_API_KEY` - Speech-to-Text
+- `HAMSA_API_KEY` - Hamsa STT + TTS (tryhamsa.com, single key for both)
 - `HAMSA_API_KEY` - Hamsa Text-to-Speech (tryhamsa.com)
 - `HAMSA_VOICE_ID` - Arabic voice ID
 - `MONGODB_URI` - MongoDB Atlas connection string

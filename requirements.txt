@@ -12,8 +12,8 @@ anthropic==0.42.0
 # Telephony
 twilio==9.4.0
 
-# Speech-to-Text (Deepgram)
-deepgram-sdk==3.8.1
+# Speech-to-Text (Hamsa - tryhamsa.com)
+# Uses websockets (already in deps) for real-time STT
 
 # Text-to-Speech (Hamsa - tryhamsa.com)
 # Uses httpx (already in deps) for API calls

@@ -1,30 +1,29 @@
-"""Deepgram streaming Speech-to-Text service."""
+"""Hamsa streaming Speech-to-Text service (tryhamsa.com)."""
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
+import json
+from collections.abc import Callable
 
 import structlog
-from deepgram import (
-    DeepgramClient,
-    DeepgramClientOptions,
-    LiveOptions,
-    LiveTranscriptionEvents,
-)
+import websockets
 
 from app.config import settings
 
 logger = structlog.get_logger()
 
+HAMSA_STT_WS_URL = "wss://api.tryhamsa.com/v1/realtime/stt"
 
-class DeepgramSTT:
-    """Streaming speech-to-text using Deepgram."""
+
+class HamsaSTT:
+    """Streaming speech-to-text using Hamsa WebSocket API."""
 
     def __init__(self):
-        config = DeepgramClientOptions(api_key=settings.deepgram_api_key)
-        self.client = DeepgramClient(config=config)
-        self._connection = None
+        self.api_key = settings.hamsa_api_key
+        self._ws = None
+        self._receive_task: asyncio.Task | None = None
         self._on_transcript: Callable[[str, bool], None] | None = None
         self._on_utterance_end: Callable[[], None] | None = None
+        self._running = False
 
     async def start(
         self,
@@ -39,71 +38,119 @@ class DeepgramSTT:
         """
         self._on_transcript = on_transcript
         self._on_utterance_end = on_utterance_end
+        self._running = True
 
-        self._connection = self.client.listen.asyncwebsocket.v("1")
+        # Connect to Hamsa real-time STT WebSocket
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
-        # Register event handlers
-        self._connection.on(LiveTranscriptionEvents.Transcript, self._handle_transcript)
-        self._connection.on(LiveTranscriptionEvents.UtteranceEnd, self._handle_utterance_end)
-        self._connection.on(LiveTranscriptionEvents.Error, self._handle_error)
-
-        options = LiveOptions(
-            language="ar",  # Arabic
-            model="nova-2",
-            encoding="mulaw",
-            sample_rate=8000,  # Twilio's audio format
-            channels=1,
-            punctuate=True,
-            interim_results=True,
-            utterance_end_ms=1500,  # 1.5s silence = end of utterance
-            vad_events=True,
-            endpointing=300,
-            smart_format=True,
+        self._ws = await websockets.connect(
+            HAMSA_STT_WS_URL,
+            additional_headers=headers,
+            ping_interval=20,
+            ping_timeout=10,
         )
 
-        started = await self._connection.start(options)
-        if not started:
-            raise RuntimeError("Failed to start Deepgram connection")
+        # Send initial configuration
+        config = {
+            "type": "config",
+            "encoding": "mulaw",
+            "sample_rate": 8000,
+            "channels": 1,
+            "language": "ar",
+            "model": "stt_realtime",
+            "interim_results": True,
+            "punctuate": True,
+            "utterance_end_ms": 1500,  # 1.5s silence = end of utterance
+        }
+        await self._ws.send(json.dumps(config))
 
-        logger.info("Deepgram STT session started")
+        # Start background task to receive transcripts
+        self._receive_task = asyncio.create_task(self._receive_loop())
+
+        logger.info("Hamsa STT session started")
 
     async def send_audio(self, audio_data: bytes) -> None:
-        """Send audio data to Deepgram for transcription."""
-        if self._connection:
-            await self._connection.send(audio_data)
+        """Send audio data to Hamsa for transcription.
+
+        Audio should be mulaw 8kHz mono (raw bytes from Twilio).
+        """
+        if self._ws and self._running:
+            try:
+                await self._ws.send(audio_data)
+            except websockets.exceptions.ConnectionClosed:
+                logger.warning("Hamsa STT WebSocket closed, cannot send audio")
 
     async def stop(self) -> None:
         """Stop the STT session."""
-        if self._connection:
-            await self._connection.finish()
-            self._connection = None
-        logger.info("Deepgram STT session stopped")
+        self._running = False
 
-    async def _handle_transcript(self, _connection, result, **kwargs) -> None:
-        """Handle incoming transcript from Deepgram."""
+        if self._ws:
+            try:
+                # Send end-of-stream signal
+                await self._ws.send(json.dumps({"type": "stop"}))
+                await self._ws.close()
+            except Exception:
+                pass
+            self._ws = None
+
+        if self._receive_task:
+            self._receive_task.cancel()
+            try:
+                await self._receive_task
+            except asyncio.CancelledError:
+                pass
+            self._receive_task = None
+
+        logger.info("Hamsa STT session stopped")
+
+    async def _receive_loop(self) -> None:
+        """Background loop to receive transcript events from Hamsa."""
         try:
-            transcript = result.channel.alternatives[0].transcript
-            if not transcript:
-                return
+            async for message in self._ws:
+                if not self._running:
+                    break
 
-            is_final = result.is_final
-            if self._on_transcript:
-                self._on_transcript(transcript, is_final)
+                try:
+                    data = json.loads(message)
+                    event_type = data.get("type", "")
 
-            logger.debug(
-                "STT transcript",
-                text=transcript[:50],
-                is_final=is_final,
-            )
-        except (IndexError, AttributeError) as e:
-            logger.error("Error parsing Deepgram transcript", error=str(e))
+                    if event_type == "transcript":
+                        transcript = data.get("text", "")
+                        if not transcript:
+                            continue
 
-    async def _handle_utterance_end(self, _connection, result, **kwargs) -> None:
-        """Handle utterance end event (silence detected)."""
-        if self._on_utterance_end:
-            self._on_utterance_end()
-        logger.debug("Utterance end detected")
+                        is_final = data.get("is_final", False)
 
-    async def _handle_error(self, _connection, error, **kwargs) -> None:
-        """Handle Deepgram errors."""
-        logger.error("Deepgram STT error", error=str(error))
+                        if self._on_transcript:
+                            self._on_transcript(transcript, is_final)
+
+                        logger.debug(
+                            "STT transcript",
+                            text=transcript[:50],
+                            is_final=is_final,
+                        )
+
+                    elif event_type == "utterance_end":
+                        if self._on_utterance_end:
+                            self._on_utterance_end()
+                        logger.debug("Utterance end detected")
+
+                    elif event_type == "error":
+                        logger.error(
+                            "Hamsa STT error",
+                            error=data.get("message", "Unknown error"),
+                        )
+
+                except json.JSONDecodeError:
+                    logger.warning("Non-JSON message from Hamsa STT")
+
+        except websockets.exceptions.ConnectionClosed as e:
+            if self._running:
+                logger.error("Hamsa STT WebSocket closed unexpectedly", code=e.code)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            if self._running:
+                logger.error("Hamsa STT receive error", error=str(e))

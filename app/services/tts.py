@@ -1,7 +1,6 @@
-"""ElevenLabs streaming Text-to-Speech service."""
+"""Hamsa streaming Text-to-Speech service (tryhamsa.com)."""
 
 import asyncio
-import audioop
 import base64
 import io
 from collections.abc import AsyncIterator
@@ -13,22 +12,22 @@ from app.config import settings
 
 logger = structlog.get_logger()
 
-ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1"
+HAMSA_API_URL = "https://api.tryhamsa.com/v1"
 
 
-class ElevenLabsTTS:
-    """Streaming text-to-speech using ElevenLabs."""
+class HamsaTTS:
+    """Streaming text-to-speech using Hamsa (Arabic-optimized)."""
 
     def __init__(self):
-        self.api_key = settings.elevenlabs_api_key
-        self.voice_id = settings.elevenlabs_voice_id
+        self.api_key = settings.hamsa_api_key
+        self.voice_id = settings.hamsa_voice_id
         self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
             self._client = httpx.AsyncClient(
                 headers={
-                    "xi-api-key": self.api_key,
+                    "Authorization": f"Bearer {self.api_key}",
                     "Content-Type": "application/json",
                 },
                 timeout=30.0,
@@ -39,59 +38,37 @@ class ElevenLabsTTS:
         """Stream TTS audio chunks in mulaw 8kHz format for Twilio.
 
         Yields base64-encoded mulaw audio chunks ready to send to Twilio.
+        Hamsa supports native mulaw 8kHz output, so no resampling needed.
         """
         client = await self._get_client()
 
-        url = f"{ELEVENLABS_API_URL}/text-to-speech/{self.voice_id}/stream"
+        url = f"{HAMSA_API_URL}/jobs/text-to-speech"
 
         payload = {
             "text": text,
-            "model_id": "eleven_turbo_v2_5",
-            "voice_settings": {
-                "stability": 0.6,
-                "similarity_boost": 0.8,
-                "style": 0.3,
-            },
-            "output_format": "pcm_24000",
+            "voice_id": self.voice_id,
+            "model_id": "tts_realtime",
+            "output_format": "ulaw_8000",
         }
 
         try:
             async with client.stream("POST", url, json=payload) as response:
                 response.raise_for_status()
-                pcm_buffer = b""
 
-                async for chunk in response.aiter_bytes(chunk_size=4800):
-                    pcm_buffer += chunk
-
-                    # Process in chunks of 4800 bytes (100ms at 24kHz 16-bit mono)
-                    while len(pcm_buffer) >= 4800:
-                        pcm_chunk = pcm_buffer[:4800]
-                        pcm_buffer = pcm_buffer[4800:]
-
-                        # Downsample from 24kHz to 8kHz
-                        downsampled = audioop.ratecv(
-                            pcm_chunk, 2, 1, 24000, 8000, None
-                        )[0]
-
-                        # Convert PCM to mulaw
-                        mulaw_chunk = audioop.lin2ulaw(downsampled, 2)
-
-                        # Base64 encode for Twilio
-                        yield base64.b64encode(mulaw_chunk).decode("ascii")
-
-                # Process remaining buffer
-                if pcm_buffer:
-                    downsampled = audioop.ratecv(
-                        pcm_buffer, 2, 1, 24000, 8000, None
-                    )[0]
-                    mulaw_chunk = audioop.lin2ulaw(downsampled, 2)
-                    yield base64.b64encode(mulaw_chunk).decode("ascii")
+                async for chunk in response.aiter_bytes(chunk_size=1600):
+                    # 1600 bytes = 200ms at 8kHz mulaw (1 byte per sample)
+                    # Already in mulaw format — just base64 encode for Twilio
+                    yield base64.b64encode(chunk).decode("ascii")
 
         except httpx.HTTPStatusError as e:
-            logger.error("ElevenLabs TTS HTTP error", status=e.response.status_code, detail=str(e))
+            logger.error(
+                "Hamsa TTS HTTP error",
+                status=e.response.status_code,
+                detail=str(e),
+            )
             raise
         except Exception as e:
-            logger.error("ElevenLabs TTS error", error=str(e))
+            logger.error("Hamsa TTS error", error=str(e))
             raise
 
     async def synthesize_full(self, text: str) -> str:

@@ -39,7 +39,7 @@ Build a voice-based customer service agent for Osus Real Estate (أُسُس ال
 - **LLM**: Anthropic Claude (via anthropic Python SDK) with tool use
 - **Telephony**: Twilio Programmable Voice + Media Streams (WebSocket)
 - **STT**: Deepgram (real-time streaming, Arabic support)
-- **TTS**: ElevenLabs (high-quality Arabic voices, streaming)
+- **TTS**: Hamsa (high-quality Arabic voices, streaming)
 - **RAG**: ChromaDB (vector DB) + sentence-transformers (multilingual embeddings)
 - **Database**: MongoDB Atlas (customer data, call logs, analysis)
 - **Deployment**: Docker + Docker Compose
@@ -64,7 +64,7 @@ voice-agent/
 │   │   ├── __init__.py
 │   │   ├── telephony.py        # Twilio: make calls, handle streams
 │   │   ├── stt.py              # Deepgram streaming STT
-│   │   ├── tts.py              # ElevenLabs streaming TTS
+│   │   ├── tts.py              # Hamsa streaming TTS
 │   │   ├── agent.py            # Claude agent with conversation + tools
 │   │   ├── rag.py              # RAG retrieval (ChromaDB + embeddings)
 │   │   └── database.py         # MongoDB Atlas operations
@@ -121,7 +121,7 @@ voice-agent/
     - WebSocket connection for real-time transcription
     - Arabic language (ar) configuration
     - Endpointing / silence detection for turn-taking
-14. Implement ElevenLabs streaming TTS service
+14. Implement Hamsa streaming TTS service
     - Arabic voice selection/configuration
     - Streaming audio generation for low latency
     - Audio format conversion (mulaw 8kHz for Twilio)
@@ -137,7 +137,7 @@ voice-agent/
 17. Build the real-time audio pipeline:
     - Twilio WebSocket → Deepgram STT (streaming)
     - Customer text → Claude agent → Response text
-    - Response text → ElevenLabs TTS (streaming) → Twilio WebSocket
+    - Response text → Hamsa TTS (streaming) → Twilio WebSocket
 
 ### Phase 6: Database & CRM
 18. Set up MongoDB Atlas connection (motor async driver)
@@ -182,7 +182,7 @@ voice-agent/
     - `update_crm`: save collected info
     - `analysis`: qualify lead (at conversation end)
 11. Claude returns response text
-12. **ElevenLabs TTS** streams audio → Twilio → customer
+12. **Hamsa TTS** streams audio → Twilio → customer
 13. Repeat 7-12 until conversation ends
 14. On end: `analysis` tool called, results saved to MongoDB, call logged
 
@@ -200,7 +200,7 @@ voice-agent/
 - `TWILIO_ACCOUNT_SID` + `TWILIO_AUTH_TOKEN` - Twilio
 - `TWILIO_PHONE_NUMBER` - Outbound caller ID (Saudi or international)
 - `DEEPGRAM_API_KEY` - Speech-to-Text
-- `ELEVENLABS_API_KEY` - Text-to-Speech
-- `ELEVENLABS_VOICE_ID` - Arabic voice ID
+- `HAMSA_API_KEY` - Hamsa Text-to-Speech (tryhamsa.com)
+- `HAMSA_VOICE_ID` - Arabic voice ID
 - `MONGODB_URI` - MongoDB Atlas connection string
 - `APP_BASE_URL` - Public URL for Twilio webhooks (use ngrok for dev)

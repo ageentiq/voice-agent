@@ -15,8 +15,8 @@ twilio==9.4.0
 # Speech-to-Text (Deepgram)
 deepgram-sdk==3.8.1
 
-# Text-to-Speech (ElevenLabs)
-elevenlabs==1.16.0
+# Text-to-Speech (Hamsa - tryhamsa.com)
+# Uses httpx (already in deps) for API calls
 
 # RAG
 chromadb==0.5.23
@@ -27,8 +27,7 @@ pypdf==5.1.0
 motor==3.6.0
 pymongo==4.10.1
 
-# Audio processing
-audioop-lts==0.2.1
+# Audio processing (Hamsa outputs mulaw natively, no conversion needed)
 
 # HTTP
 httpx==0.28.1

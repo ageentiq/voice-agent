@@ -15,7 +15,7 @@ from app.models.call import CallDirection, CallSession, CallStatus, TranscriptEn
 from app.services import database, rag
 from app.services.agent import VoiceAgent
 from app.services.stt import DeepgramSTT
-from app.services.tts import ElevenLabsTTS
+from app.services.tts import HamsaTTS
 
 logger = structlog.get_logger()
 
@@ -38,7 +38,7 @@ class ActiveCall:
         self.session = session
         self.agent = agent
         self.stt = DeepgramSTT()
-        self.tts = ElevenLabsTTS()
+        self.tts = HamsaTTS()
         self._ws = None  # Twilio WebSocket
         self._stream_sid: str | None = None
         self._current_utterance = ""

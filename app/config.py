@@ -13,9 +13,9 @@ class Settings(BaseSettings):
     # Deepgram
     deepgram_api_key: str
 
-    # ElevenLabs
-    elevenlabs_api_key: str
-    elevenlabs_voice_id: str
+    # Hamsa TTS (tryhamsa.com)
+    hamsa_api_key: str
+    hamsa_voice_id: str
 
     # MongoDB
     mongodb_uri: str

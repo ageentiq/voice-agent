@@ -1,5 +1,7 @@
 """RAG service using ChromaDB and multilingual embeddings."""
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 

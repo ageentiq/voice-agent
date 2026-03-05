@@ -18,14 +18,15 @@ twilio==9.4.0
 # Text-to-Speech (Hamsa - tryhamsa.com)
 # Uses httpx (already in deps) for API calls
 
-# RAG
+# RAG - Install torch CPU-only first
+# Note: Install torch separately before chromadb to avoid GPU version
 chromadb==0.5.23
 sentence-transformers==3.3.1
 pypdf==5.1.0
 
 # Database
 motor==3.6.0
-pymongo==4.10.1
+pymongo<4.10,>=4.9
 
 # Audio processing (Hamsa outputs mulaw natively, no conversion needed)
 

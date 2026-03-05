@@ -1,6 +1,7 @@
 """FastAPI application - Voice Customer Service Agent for Osus Real Estate."""
 
 import json
+import logging
 from contextlib import asynccontextmanager
 
 import structlog
@@ -24,9 +25,16 @@ async def lifespan(app: FastAPI):
     """Application startup and shutdown."""
     # Startup
     structlog.configure(
-        wrapper_class=structlog.make_filtering_bound_logger(
-            structlog.get_level_from_name(settings.log_level)
-        ),
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=False,
     )
     await database.connect()
     logger.info("Voice Agent service started")
